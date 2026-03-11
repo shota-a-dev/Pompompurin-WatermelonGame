@@ -92,6 +92,12 @@ let sparkles = [];
 let isNewBest = false;
 let isBgmStarted = false;
 
+// 画像の事前読み込み（ゲームオーバーと新記録のカットイン用）
+const preloadImg1 = new Image();
+preloadImg1.src = 'assets/image/purin_gameover.png';
+const preloadImg2 = new Image();
+preloadImg2.src = 'assets/image/purin_update_best.png';
+
 // 魔法ゲージ
 let magicPoints = 0;
 const MAX_MAGIC_POINTS = 100;
