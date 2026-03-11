@@ -83,13 +83,14 @@ let engine, world, runner;
 let gameState = 'START';
 let score = 0;
 let bestScore = localStorage.getItem('pomEvoBest_v6') || 0;
-
 let currentType = 0;
 let nextType = 0;
 let isDropping = false;
 let currentX = GAME_WIDTH / 2;
 let particles = [];
 let sparkles = [];
+let isNewBest = false;
+let isBgmStarted = false;
 
 // 魔法ゲージ
 let magicPoints = 0;
@@ -151,7 +152,7 @@ function playTone(freq, type, dur, vol = 0.1, time = audioCtx.currentTime) {
  * BGMの再生（簡易ループ）
  */
 function startBGM() {
-  if (gameState !== 'PLAYING') return;
+  if (gameState !== 'PLAYING' && gameState !== 'START') return;
   if (nextNoteTime < audioCtx.currentTime + 0.1) {
     const n = melody[noteIdx];
     playTone(n.f, 'triangle', n.d * 0.4, 0.05, nextNoteTime);
@@ -260,6 +261,18 @@ function init() {
     useMagic();
   };
 
+  // ログイン画面での初回インタラクション時にBGMを開始
+  const startAudioOnInteract = () => {
+    if (!isBgmStarted && gameState === 'START') {
+      initAudio();
+      nextNoteTime = audioCtx.currentTime;
+      startBGM();
+      isBgmStarted = true;
+    }
+  };
+  window.addEventListener('mousedown', startAudioOnInteract, { once: true });
+  window.addEventListener('touchstart', startAudioOnInteract, { once: true });
+
   /**
    * マウス・タッチ入力制御
    */
@@ -311,6 +324,7 @@ function startGame() {
   isDropping = false;
   currentX = GAME_WIDTH / 2;
   score = 0;
+  isNewBest = false; // 追加: 新記録フラグをリセット
   updateScore(0);
   magicPoints = 0;
   updateMagicGauge();
@@ -327,8 +341,13 @@ function startGame() {
   currentType = Math.floor(Math.random() * 3);
   nextType = Math.floor(Math.random() * 3);
   updateNextPreview();
-  nextNoteTime = audioCtx.currentTime;
-  startBGM();
+
+  // 修正: 既にBGMが始まっていない場合のみ開始する
+  if (!isBgmStarted) {
+    nextNoteTime = audioCtx.currentTime;
+    startBGM();
+    isBgmStarted = true;
+  }
 }
 
 /**
@@ -451,6 +470,7 @@ function updateScore(add) {
     bestScore = score;
     localStorage.setItem('pomEvoBest_v6', bestScore);
     document.getElementById('bestVal').innerText = bestScore;
+    isNewBest = true; 
   }
 }
 
@@ -787,10 +807,22 @@ function gameOver() {
   if (gameState === 'GAMEOVER') return;
   gameState = 'GAMEOVER';
   clearTimeout(bgmTimer);
+  isBgmStarted = false; // 追加: 再プレイ時にBGMを再開できるようにリセット
+
   document.getElementById('finalScore').innerText = score;
   const screen = document.getElementById('gameover-screen');
   screen.classList.remove('hidden');
   document.getElementById('magic-container').classList.add('hidden');
+
+  // --- ここから追加 ---
+  // 自己ベスト更新かどうかに応じて画像を切り替える
+  const gameoverImg = document.querySelector('#gameover-screen img');
+  if (isNewBest) {
+    gameoverImg.src = 'assets/image/purin_gameover_best.png';
+  } else {
+    gameoverImg.src = 'assets/image/purin_gameover.png';
+  }
+  // --- ここまで追加 ---
 
   setTimeout(() => {
     screen.style.opacity = 1;
