@@ -1,84 +1,160 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
     <title>ポムポム！ぷりんシンカ</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css">
-</head>
-<body>
-
+    <link
+      href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700;900&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
     <div id="game-wrapper">
-        <div id="game-container">
-            <canvas id="gameCanvas"></canvas>
+      <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
 
-            <div id="ui-layer" class="absolute inset-0 pointer-events-none text-[#5E3A21]">
-                <div class="absolute top-4 left-4 bg-white/95 px-3 py-1 rounded-2xl shadow-md border-2 border-[#FDE047]">
-                    <p class="text-[8px] font-black opacity-60">SCORE</p>
-                    <p id="scoreVal" class="text-lg font-black text-orange-600">0</p>
-                </div>
-                
-                <div class="absolute top-4 right-4 bg-white/95 px-3 py-1 rounded-2xl shadow-md border-2 border-[#FDE047]">
-                    <p class="text-[8px] font-black opacity-60 text-right">BEST</p>
-                    <p id="bestVal" class="text-md font-black text-orange-400 text-right">0</p>
-                </div>
+        <div
+          id="ui-layer"
+          class="absolute inset-0 pointer-events-none text-[#5E3A21]"
+        >
+          <div
+            class="absolute top-4 left-4 bg-white/95 px-3 py-1 rounded-2xl shadow-md border-2 border-[#FDE047]"
+          >
+            <p class="text-[8px] font-black opacity-60">SCORE</p>
+            <p id="scoreVal" class="text-lg font-black text-orange-600">0</p>
+          </div>
 
-                <div id="magic-container" class="hidden">
-                    <div id="magic-btn" class="disabled" title="おたすけ魔法！">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 2L14.5 9H21.5L16 13L18 20L12 16L6 20L8 13L2.5 9H9.5L12 2Z" fill="#5E3A21"/>
-                        </svg>
-                    </div>
-                    <div class="flex flex-col items-center">
-                        <div id="magic-gauge-bg">
-                            <div id="magic-gauge-fill"></div>
-                        </div>
-                        <p class="text-[8px] font-black mt-0.5">まめ消し</p>
-                    </div>
-                </div>
+          <div
+            class="absolute top-4 right-4 bg-white/95 px-3 py-1 rounded-2xl shadow-md border-2 border-[#FDE047]"
+          >
+            <p class="text-[8px] font-black opacity-60 text-right">BEST</p>
+            <p
+              id="bestVal"
+              class="text-md font-black text-orange-400 text-right"
+            >
+              0
+            </p>
+          </div>
 
-                <div class="absolute top-24 right-4 bg-white/95 p-2 rounded-2xl shadow-md border-2 border-orange-100 text-center">
-                    <p class="text-[10px] font-black mb-1">NEXT</p>
-                    <div class="w-12 h-12 flex items-center justify-center mx-auto">
-                        <canvas id="nextCanvas" width="48" height="48"></canvas>
-                    </div>
-                </div>
-
-                <div id="evolution-chart"></div>
-
-                <div id="cutin-container">
-                    <div class="cutin-bg">
-                        <span id="cutin-text" class="cutin-text">にじプリン だよ！</span>
-                    </div>
-                </div>
-
-                <div id="title-screen" class="interactive absolute inset-0 flex flex-col items-center justify-center bg-[#FFFDEB] pointer-events-auto z-[200]">
-                    <div class="float-anim mb-4 bg-white p-6 rounded-[3rem] shadow-xl border-4 border-[#5E3A21] flex items-center justify-center">
-                        <img src="assets/image/pompompurin.png" alt="ポムポムプリン" width="200" height="200">
-                    </div>
-                    <h1 class="text-3xl font-black mb-6 text-center text-shadow-premium">ポムポム！<br>ぷりんシンカ</h1>
-                    <button id="start-btn" class="bg-[#FDE047] text-[#5E3A21] font-black py-4 px-12 rounded-full text-xl shadow-[0_8px_0_#CA8A04] active:translate-y-1 active:shadow-none transition-all border-4 border-[#5E3A21]">
-                        あそぶ！
-                    </button>
-                </div>
-
-                <div id="gameover-screen" class="interactive absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-500 z-[250] hidden">
-                    <div class="bg-white p-10 rounded-[3rem] shadow-2xl text-center border-4 border-[#5E3A21] max-w-[80%]">
-                        <h2 class="text-2xl font-black mb-4 text-red-500">あふれちゃった！</h2>
-                        <p class="text-gray-500 font-bold mb-1">SCORE</p>
-                        <p id="finalScore" class="text-5xl font-black text-orange-500 mb-8">0</p>
-                        <button id="retry-btn" class="bg-[#FDE047] text-[#5E3A21] font-black py-4 px-10 rounded-full text-lg shadow-[0_6px_0_#CA8A04] w-full border-4 border-[#5E3A21]">
-                            もういっかい！
-                        </button>
-                    </div>
-                </div>
+          <div id="magic-container" class="hidden">
+            <div id="magic-btn" class="disabled" title="おたすけ魔法！">
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M12 2L14.5 9H21.5L16 13L18 20L12 16L6 20L8 13L2.5 9H9.5L12 2Z"
+                  fill="#5E3A21"
+                />
+              </svg>
             </div>
+            <div class="flex flex-col items-center">
+              <div id="magic-gauge-bg">
+                <div id="magic-gauge-fill"></div>
+              </div>
+              <p class="text-[8px] font-black mt-0.5">まめ消し</p>
+            </div>
+          </div>
+
+          <div
+            class="absolute top-24 right-4 bg-white/95 p-2 rounded-2xl shadow-md border-2 border-orange-100 text-center"
+          >
+            <p class="text-[10px] font-black mb-1">NEXT</p>
+            <div class="w-12 h-12 flex items-center justify-center mx-auto">
+              <canvas id="nextCanvas" width="48" height="48"></canvas>
+            </div>
+          </div>
+
+          <div
+            class="absolute top-24 left-4 bg-white/95 p-2 rounded-2xl shadow-md border-2 border-orange-100 flex items-center justify-center w-16 h-16"
+          >
+            <img
+              id="status-img"
+              src="assets/image/purin_early.png"
+              alt="ポムポムプリン"
+              class="max-w-full max-h-full"
+            />
+          </div>
+
+          <div id="evolution-chart"></div>
+
+          <div id="cutin-container">
+            <div class="cutin-bg">
+              <span id="cutin-text" class="cutin-text">にじプリン だよ！</span>
+            </div>
+          </div>
+
+          <div
+            id="title-screen"
+            class="interactive absolute inset-0 flex flex-col items-center justify-center bg-[#FFFDEB] pointer-events-auto z-[200]"
+          >
+            <div
+              class="float-anim mb-4 bg-white p-6 rounded-[3rem] shadow-xl border-4 border-[#5E3A21] flex items-center justify-center"
+            >
+              <img
+                src="assets/image/pompompurin.png"
+                alt="ポムポムプリン"
+                width="200"
+                height="200"
+              />
+            </div>
+            <h1
+              class="text-3xl font-black mb-6 text-center text-shadow-premium"
+            >
+              ポムポム！<br />ぷりんシンカ
+            </h1>
+            <button
+              id="start-btn"
+              class="bg-[#FDE047] text-[#5E3A21] font-black py-4 px-12 rounded-full text-xl shadow-[0_8px_0_#CA8A04] active:translate-y-1 active:shadow-none transition-all border-4 border-[#5E3A21]"
+            >
+              あそぶ！
+            </button>
+          </div>
+
+          <div
+            id="gameover-screen"
+            class="interactive absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-500 z-[250] hidden"
+          >
+            <div
+              class="bg-white p-8 rounded-[3rem] shadow-2xl text-center border-4 border-[#5E3A21] w-11/12 max-w-sm"
+            >
+              <h2 class="text-2xl font-black mb-2 text-red-500">
+                あふれちゃった！
+              </h2>
+              <img
+                src="assets/image/purin_gameover.png"
+                alt="ゲームオーバー"
+                class="w-32 h-auto mx-auto mb-2"
+              />
+              <p class="text-gray-500 font-bold mb-1">SCORE</p>
+              <p
+                id="finalScore"
+                class="text-5xl font-black text-orange-500 mb-6"
+              >
+                0
+              </p>
+              <button
+                id="retry-btn"
+                class="bg-[#FDE047] text-[#5E3A21] font-black py-4 px-10 rounded-full text-lg shadow-[0_6px_0_#CA8A04] w-full border-4 border-[#5E3A21]"
+              >
+                もういっかい！
+              </button>
+            </div>
+          </div>
         </div>
+      </div>
     </div>
 
     <script src="js/main.js"></script>
-</body>
+  </body>
 </html>

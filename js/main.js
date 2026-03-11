@@ -6,6 +6,7 @@ const CONTAINER_BOTTOM_MARGIN = 90;
 const CONTAINER_CENTER_Y =
   GAME_HEIGHT - CONTAINER_H / 2 - CONTAINER_BOTTOM_MARGIN;
 const DEADLINE_Y = CONTAINER_CENTER_Y - CONTAINER_H / 2 + 50;
+const DROP_Y = 130;
 
 const EVOLUTION = [
   {
@@ -224,17 +225,15 @@ function init() {
   const handleInput = (e) => {
     if (gameState !== 'PLAYING' || isDropping) return;
 
-    // 座標取得
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     const rect = canvas.getBoundingClientRect();
 
-    // キャンバス相対座標に変換
     const relX = (clientX - rect.left) * (GAME_WIDTH / rect.width);
     const relY = (clientY - rect.top) * (GAME_HEIGHT / rect.height);
 
-    // 画面上部(UIエリア：y < 80)は操作を無効化
-    if (relY < 80) return;
+    // 【修正】UIエリアを少し広めに保護 (80 -> 120)
+    if (relY < 120) return;
 
     const radius = EVOLUTION[currentType].radius;
     currentX = Math.max(
@@ -249,7 +248,7 @@ function init() {
   window.addEventListener('mouseup', (e) => {
     const rect = canvas.getBoundingClientRect();
     const relY = (e.clientY - rect.top) * (GAME_HEIGHT / rect.height);
-    if (relY < 80) return;
+    if (relY < 120) return; // 【修正】120に変更
     handleDrop();
   });
   window.addEventListener('touchstart', handleInput, { passive: false });
@@ -259,7 +258,7 @@ function init() {
       const rect = canvas.getBoundingClientRect();
       const relY =
         (e.changedTouches[0].clientY - rect.top) * (GAME_HEIGHT / rect.height);
-      if (relY < 80) return;
+      if (relY < 120) return; // 【修正】120に変更
     }
     handleDrop();
   });
@@ -302,7 +301,8 @@ function updateNextPreview() {
 function handleDrop() {
   if (gameState !== 'PLAYING' || isDropping) return;
   isDropping = true;
-  const p = Bodies.circle(currentX, 100, EVOLUTION[currentType].radius, {
+  // 【修正】100 を DROP_Y に変更
+  const p = Bodies.circle(currentX, DROP_Y, EVOLUTION[currentType].radius, {
     restitution: 0.1,
     friction: 0.1,
     label: 'pudding',
@@ -398,6 +398,18 @@ function updateScore(add) {
     localStorage.setItem('pomEvoBest_v6', bestScore);
     document.getElementById('bestVal').innerText = bestScore;
   }
+
+  // 状況画像の切り替え（閾値はゲームバランスに合わせて適宜変更してください）
+  const statusImg = document.getElementById('status-img');
+  if (statusImg) {
+    if (score >= 1000) {
+      statusImg.src = 'assets/image/purin_late.png';
+    } else if (score >= 300) {
+      statusImg.src = 'assets/image/purin_mid.png';
+    } else {
+      statusImg.src = 'assets/image/purin_early.png';
+    }
+  }
 }
 
 // 魔法ゲージ処理
@@ -481,7 +493,7 @@ function render() {
     drawPudding(
       ctx,
       currentX,
-      100,
+      DROP_Y, // 【修正】100 を DROP_Y に変更
       EVOLUTION[currentType].radius,
       EVOLUTION[currentType].color,
       EVOLUTION[currentType].borderColor,
@@ -490,7 +502,7 @@ function render() {
     ctx.globalAlpha = 1.0;
     ctx.strokeStyle = 'rgba(94, 58, 33, 0.05)';
     ctx.beginPath();
-    ctx.moveTo(currentX, 100);
+    ctx.moveTo(currentX, DROP_Y); // 【修正】100 を DROP_Y に変更
     ctx.lineTo(currentX, 650);
     ctx.stroke();
   }
