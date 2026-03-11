@@ -64,7 +64,7 @@ const EVOLUTION = [
     radius: 88,
     color: 'rainbow',
     borderColor: '#5E3A21',
-    label: '神',
+    label: '虹',
     score: 150,
   },
 ];
