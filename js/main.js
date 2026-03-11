@@ -274,8 +274,9 @@ function handleDrop() {
 
   // 物理エンジンの円形オブジェクトを作成
   const p = Bodies.circle(currentX, DROP_Y, EVOLUTION[currentType].radius, {
-    restitution: 0.1,
-    friction: 0.1,
+    restitution: 0.2, // 少し跳ねるように
+    friction: 0.01, // 摩擦を極限まで下げて転がりを良くする
+    frictionAir: 0.01, // 空気抵抗もわずかに調整
     label: 'pudding',
     custom: {
       level: currentType,
@@ -514,7 +515,7 @@ function render() {
 
     // ゲームオーバー判定
     p.custom.life++;
-    if (p.position.y < DEADLINE_Y && p.custom.life > 120) {
+    if (p.position.y - config.radius < DEADLINE_Y && p.custom.life > 60) {
       const speed = Vector.magnitude(p.velocity);
       if (speed < 0.4) {
         p.custom.dangerTime++;
@@ -588,23 +589,23 @@ function drawPudding(ctx, x, y, radius, color, borderColor, level) {
 
   // 2. 「つや」光沢（グラデーション）：ぷるぷる感のベース
   const gloss = ctx.createRadialGradient(
-    x - radius / 2.5,
-    y - radius / 2.5,
+    x - radius * 0.35,
+    y - radius * 0.35,
     0,
-    x - radius / 2.5,
-    y - radius / 2.5,
-    radius,
+    x - radius * 0.35,
+    y - radius * 0.35,
+    radius * 1.2,
   );
-  gloss.addColorStop(0, 'rgba(255,255,255,0.7)'); // 光沢を少し強めた
-  gloss.addColorStop(0.3, 'rgba(255,255,255,0.2)');
-  gloss.addColorStop(0.8, 'rgba(255,255,255,0)');
+  gloss.addColorStop(0, 'rgba(255, 255, 255, 0.8)'); // 中心は強く
+  gloss.addColorStop(0.2, 'rgba(255, 255, 255, 0.4)');
+  gloss.addColorStop(0.5, 'rgba(255, 255, 255, 0)');
   ctx.fillStyle = gloss;
   ctx.beginPath();
   ctx.arc(x, y, radius, 0, Math.PI * 2);
   ctx.fill();
 
   // 【新規追加】ハイライト（白い光の点）：さらに光沢感を出すための修正
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
   ctx.beginPath();
   ctx.ellipse(
     x - radius * 0.4,
