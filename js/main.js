@@ -154,7 +154,7 @@ function startBGM() {
   if (gameState !== 'PLAYING') return;
   if (nextNoteTime < audioCtx.currentTime + 0.1) {
     const n = melody[noteIdx];
-    playTone(n.f, 'triangle', n.d * 0.4, 0.03, nextNoteTime);
+    playTone(n.f, 'triangle', n.d * 0.4, 0.05, nextNoteTime);
     nextNoteTime += n.d * 0.4;
     noteIdx = (noteIdx + 1) % melody.length;
   }
