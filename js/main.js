@@ -262,6 +262,18 @@ function init() {
   // ボタンイベント登録
   document.getElementById('start-btn').onclick = startGame;
   document.getElementById('retry-btn').onclick = startGame;
+
+  // ベストスコアリセットボタン
+  document.getElementById('reset-best-btn').onclick = () => {
+    if (confirm('自己ベストをリセットしてもよろしいですか？')) {
+      localStorage.removeItem('pomEvoBest_v6');
+      bestScore = 0;
+      document.getElementById('bestVal').innerText = '0';
+      alert('リセットしました。');
+    }
+  };
+
+  // 魔法ボタンイベント
   document.getElementById('magic-btn').onclick = (e) => {
     e.stopPropagation();
     useMagic();
@@ -476,7 +488,7 @@ function updateScore(add) {
     bestScore = score;
     localStorage.setItem('pomEvoBest_v6', bestScore);
     document.getElementById('bestVal').innerText = bestScore;
-    isNewBest = true; 
+    isNewBest = true;
   }
 }
 
