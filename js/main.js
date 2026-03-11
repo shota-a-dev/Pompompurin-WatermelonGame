@@ -1,13 +1,19 @@
+/**
+ * 定数定義：画面サイズ、容器サイズ、落下位置など
+ */
 const GAME_WIDTH = 380;
 const GAME_HEIGHT = 680;
 const CONTAINER_W = 300;
-const CONTAINER_H = 352; // 変更: 440の0.8倍に高さを変更して難易度を上げる
+const CONTAINER_H = 352; // 高さを調整して難易度を上げている
 const CONTAINER_BOTTOM_MARGIN = 90;
 const CONTAINER_CENTER_Y =
   GAME_HEIGHT - CONTAINER_H / 2 - CONTAINER_BOTTOM_MARGIN;
-const DEADLINE_Y = CONTAINER_CENTER_Y - CONTAINER_H / 2 + 50;
-const DROP_Y = 130;
+const DEADLINE_Y = CONTAINER_CENTER_Y - CONTAINER_H / 2 + 50; // ゲームオーバー判定線
+const DROP_Y = 130; // プリンを生成する高さ
 
+/**
+ * プリンの進化データ：サイズ、色、スコアなど
+ */
 const EVOLUTION = [
   {
     radius: 18,
@@ -60,6 +66,9 @@ const EVOLUTION = [
   },
 ];
 
+/**
+ * 各種状態・Matter.js関連の変数
+ */
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const nextCanvas = document.getElementById('nextCanvas');
@@ -72,17 +81,17 @@ let gameState = 'START';
 let score = 0;
 let bestScore = localStorage.getItem('pomEvoBest_v6') || 0;
 
-let currentType = 0;
-let nextType = 0;
-let isDropping = false;
-let currentX = GAME_WIDTH / 2;
-let particles = [];
-let sparkles = [];
+let currentType = 0; // 現在操作中のプリンのレベル
+let nextType = 0; // 次に出てくるプリンのレベル
+let isDropping = false; // 落下中フラグ
+let currentX = GAME_WIDTH / 2; // 操作中のX座標
+let particles = []; // 合体時のエフェクト
+let sparkles = []; // 虹プリンのキラキラ
 
-// 魔法ゲージ関連
-let magicPoints = 0;
+let magicPoints = 0; // 魔法ゲージ
 const MAX_MAGIC_POINTS = 100;
 
+// サウンド（Web Audio API）関連
 let audioCtx, bgmTimer;
 const melody = [
   { f: 392, d: 0.5 },
@@ -96,55 +105,9 @@ const melody = [
 let noteIdx = 0,
   nextNoteTime = 0;
 
-function resizeGame() {
-  const wrapper = document.getElementById('game-wrapper');
-  const container = document.getElementById('game-container');
-  const winW = wrapper.clientWidth;
-  const winH = wrapper.clientHeight;
-  const scale = Math.min(winW / GAME_WIDTH, winH / GAME_HEIGHT);
-  container.style.transform = `scale(${scale})`;
-}
-
-function initAudio() {
-  if (!audioCtx)
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  if (audioCtx.state === 'suspended') audioCtx.resume();
-}
-
-function playTone(freq, type, dur, vol = 0.1, time = audioCtx.currentTime) {
-  if (!audioCtx) return;
-  const osc = audioCtx.createOscillator(),
-    gain = audioCtx.createGain();
-  osc.type = type;
-  osc.frequency.setValueAtTime(freq, time);
-  gain.gain.setValueAtTime(vol, time);
-  gain.gain.exponentialRampToValueAtTime(0.001, time + dur);
-  osc.connect(gain);
-  gain.connect(audioCtx.destination);
-  osc.start(time);
-  osc.stop(time + dur);
-}
-
-function startBGM() {
-  if (gameState !== 'PLAYING') return;
-  if (nextNoteTime < audioCtx.currentTime + 0.1) {
-    const n = melody[noteIdx];
-    playTone(n.f, 'triangle', n.d * 0.4, 0.03, nextNoteTime);
-    nextNoteTime += n.d * 0.4;
-    noteIdx = (noteIdx + 1) % melody.length;
-  }
-  bgmTimer = setTimeout(startBGM, 50);
-}
-
-function showCutin(text) {
-  const container = document.getElementById('cutin-container');
-  const textEl = document.getElementById('cutin-text');
-  textEl.innerText = text;
-  container.classList.remove('animate-cutin');
-  void container.offsetWidth;
-  container.classList.add('animate-cutin');
-}
-
+/**
+ * ゲームの初期化：キャンバス設定、物理エンジン起動、イベント登録
+ */
 function init() {
   canvas.width = GAME_WIDTH;
   canvas.height = GAME_HEIGHT;
@@ -153,6 +116,7 @@ function init() {
   resizeGame();
   window.addEventListener('resize', resizeGame);
 
+  // 物理エンジンの生成
   engine = Engine.create();
   world = engine.world;
   engine.gravity.y = 1.4;
@@ -160,6 +124,7 @@ function init() {
   runner = Runner.create();
   Runner.run(runner, engine);
 
+  // 進化図解を生成してHTMLに追加
   const chart = document.getElementById('evolution-chart');
   EVOLUTION.forEach((evo, i) => {
     const item = document.createElement('div');
@@ -169,9 +134,9 @@ function init() {
         ? 'linear-gradient(45deg, #FFADAD, #FFFF99, #A0C4FF)'
         : evo.color;
     item.innerHTML = `
-            <div style="background:${bg}; width:24px; height:24px; border-radius:50%; border:2px solid ${evo.borderColor};"></div>
-            <span class="text-[9px] font-black leading-none">${evo.label}</span>
-        `;
+      <div style="background:${bg}; width:24px; height:24px; border-radius:50%; border:2px solid ${evo.borderColor};"></div>
+      <span class="text-[9px] font-black leading-none">${evo.label}</span>
+    `;
     chart.appendChild(item);
     if (i < EVOLUTION.length - 1) {
       const arrow = document.createElement('div');
@@ -181,6 +146,7 @@ function init() {
     }
   });
 
+  // 容器（壁）の生成
   const wallOpt = {
     isStatic: true,
     friction: 0.1,
@@ -195,47 +161,51 @@ function init() {
       CONTAINER_W + 40,
       40,
       wallOpt,
-    ),
+    ), // 床
     Bodies.rectangle(
       containerX - CONTAINER_W / 2 - 10,
       CONTAINER_CENTER_Y,
       20,
       CONTAINER_H + 40,
       wallOpt,
-    ),
+    ), // 左壁
     Bodies.rectangle(
       containerX + CONTAINER_W / 2 + 10,
       CONTAINER_CENTER_Y,
       20,
       CONTAINER_H + 40,
       wallOpt,
-    ),
+    ), // 右壁
   ]);
 
+  // 物理エンジンの衝突イベント
   Events.on(engine, 'collisionStart', handleCollision);
   requestAnimationFrame(render);
 
+  // ボタンイベントの紐付け
   document.getElementById('start-btn').onclick = startGame;
   document.getElementById('retry-btn').onclick = startGame;
   document.getElementById('magic-btn').onclick = (e) => {
-    e.stopPropagation(); // バブリング防止
+    e.stopPropagation();
     useMagic();
   };
 
+  /**
+   * マウス・タッチ入力の制御
+   */
   const handleInput = (e) => {
     if (gameState !== 'PLAYING' || isDropping) return;
 
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     const rect = canvas.getBoundingClientRect();
-
     const relX = (clientX - rect.left) * (GAME_WIDTH / rect.width);
     const relY = (clientY - rect.top) * (GAME_HEIGHT / rect.height);
 
-    // 【修正】UIエリアを少し広めに保護 (80 -> 120)
-    if (relY < 120) return;
+    if (relY < 120) return; // 上部のUIエリアでは操作を無視
 
     const radius = EVOLUTION[currentType].radius;
+    // 容器の幅からはみ出さないように制限
     currentX = Math.max(
       containerX - CONTAINER_W / 2 + radius,
       Math.min(containerX + CONTAINER_W / 2 - radius, relX),
@@ -248,7 +218,7 @@ function init() {
   window.addEventListener('mouseup', (e) => {
     const rect = canvas.getBoundingClientRect();
     const relY = (e.clientY - rect.top) * (GAME_HEIGHT / rect.height);
-    if (relY < 120) return; // 【修正】120に変更
+    if (relY < 120) return;
     handleDrop();
   });
   window.addEventListener('touchstart', handleInput, { passive: false });
@@ -258,12 +228,15 @@ function init() {
       const rect = canvas.getBoundingClientRect();
       const relY =
         (e.changedTouches[0].clientY - rect.top) * (GAME_HEIGHT / rect.height);
-      if (relY < 120) return; // 【修正】120に変更
+      if (relY < 120) return;
     }
     handleDrop();
   });
 }
 
+/**
+ * ゲーム開始処理：初期化とUIの表示切り替え
+ */
 function startGame() {
   initAudio();
   gameState = 'PLAYING';
@@ -273,6 +246,8 @@ function startGame() {
   updateScore(0);
   magicPoints = 0;
   updateMagicGauge();
+
+  // 画面に残っている物理オブジェクトを削除
   const allBodies = Composite.allBodies(world);
   allBodies.forEach((b) => {
     if (b.label === 'pudding') Composite.remove(world, b);
@@ -281,8 +256,6 @@ function startGame() {
   document.getElementById('title-screen').classList.add('hidden');
   document.getElementById('gameover-screen').classList.add('hidden');
   document.getElementById('gameover-screen').style.opacity = 0;
-
-  // 変更: ゲーム開始時に魔法ゲージを表示する
   document.getElementById('magic-container').classList.remove('hidden');
 
   currentType = Math.floor(Math.random() * 3);
@@ -292,23 +265,21 @@ function startGame() {
   startBGM();
 }
 
-function updateNextPreview() {
-  nextCtx.clearRect(0, 0, 48, 48);
-  const config = EVOLUTION[nextType];
-  drawPudding(nextCtx, 24, 24, 14, config.color, config.borderColor, 0);
-}
-
+/**
+ * プリンを落下させる
+ */
 function handleDrop() {
   if (gameState !== 'PLAYING' || isDropping) return;
   isDropping = true;
-  // 【修正】100 を DROP_Y に変更
+
+  // 物理エンジンの円形オブジェクトを作成
   const p = Bodies.circle(currentX, DROP_Y, EVOLUTION[currentType].radius, {
     restitution: 0.1,
     friction: 0.1,
     label: 'pudding',
     custom: {
       level: currentType,
-      squish: 1.1,
+      squish: 1.1, // 生成時のわずかな歪み
       life: 0,
       dangerTime: 0,
       isProcessing: false,
@@ -316,6 +287,8 @@ function handleDrop() {
   });
   Composite.add(world, p);
   playTone(440, 'sine', 0.1, 0.04);
+
+  // 次のプリンを準備
   setTimeout(() => {
     if (gameState !== 'PLAYING') return;
     currentType = nextType;
@@ -325,10 +298,14 @@ function handleDrop() {
   }, 600);
 }
 
+/**
+ * 衝突時の進化ロジック
+ */
 function handleCollision(event) {
   event.pairs.forEach((pair) => {
     const a = pair.bodyA,
       b = pair.bodyB;
+    // プリン同士かつ同じレベルの場合のみ進化
     if (a.label === 'pudding' && b.label === 'pudding') {
       if (
         a.custom.level === b.custom.level &&
@@ -364,25 +341,23 @@ function handleCollision(event) {
           );
           Composite.add(world, evolved);
           updateScore(EVOLUTION[newLevel].score);
-          addMagicPoints(5 + newLevel * 2); // 合体で魔法ゲージを貯める
+          addMagicPoints(5 + newLevel * 2);
 
+          // 虹プリンへの進化時のみ特別な演出
           if (newLevel === 6) {
             createSpecialParticles(newX, newY, 60);
             playTone(880, 'sine', 0.2, 0.1);
-            playTone(1046, 'sine', 0.3, 0.1, audioCtx.currentTime + 0.1);
             showCutin('にじプリン だよ！');
           } else {
             createParticles(newX, newY, EVOLUTION[newLevel].color);
             playTone(523 + newLevel * 50, 'sine', 0.15, 0.08);
           }
         } else if (level === 6) {
+          // 虹プリン同士が合体した場合、消滅して大量加点
           Composite.remove(world, [a, b]);
           updateScore(500);
           addMagicPoints(50);
           createSpecialParticles(newX, newY, 120);
-          playTone(1046, 'square', 0.2, 0.1);
-          playTone(1318, 'square', 0.2, 0.1, audioCtx.currentTime + 0.1);
-          playTone(1567, 'square', 0.4, 0.1, audioCtx.currentTime + 0.2);
           showCutin('きらきら！ はじけたよ');
         }
       }
@@ -390,6 +365,9 @@ function handleCollision(event) {
   });
 }
 
+/**
+ * スコア更新と、状況に応じたポムポムプリン画像の切り替え
+ */
 function updateScore(add) {
   score += add;
   document.getElementById('scoreVal').innerText = score;
@@ -399,7 +377,7 @@ function updateScore(add) {
     document.getElementById('bestVal').innerText = bestScore;
   }
 
-  // 状況画像の切り替え（閾値はゲームバランスに合わせて適宜変更してください）
+  // スコアの進行に合わせて左側の画像を差し替え
   const statusImg = document.getElementById('status-img');
   if (statusImg) {
     if (score >= 1000) {
@@ -412,7 +390,9 @@ function updateScore(add) {
   }
 }
 
-// 魔法ゲージ処理
+/**
+ * 魔法ゲージ・機能関連
+ */
 function addMagicPoints(pts) {
   magicPoints = Math.min(MAX_MAGIC_POINTS, magicPoints + pts);
   updateMagicGauge();
@@ -422,7 +402,7 @@ function updateMagicGauge() {
   const fill = document.getElementById('magic-gauge-fill');
   const btn = document.getElementById('magic-btn');
   const percent = (magicPoints / MAX_MAGIC_POINTS) * 100;
-  fill.style.width = percent + '%'; // 横方向に変更
+  fill.style.width = percent + '%';
   if (percent >= 100) {
     btn.classList.add('ready');
     btn.classList.remove('disabled');
@@ -437,6 +417,7 @@ function useMagic() {
   magicPoints = 0;
   updateMagicGauge();
 
+  // 盤面にある最小レベル（豆）のプリンをすべて消去する魔法
   const puddings = Composite.allBodies(world).filter(
     (b) => b.label === 'pudding',
   );
@@ -446,16 +427,16 @@ function useMagic() {
     createParticles(b.position.x, b.position.y, '#FFFFFF');
     Composite.remove(world, b);
   });
-
-  playTone(880, 'sine', 0.1, 0.1);
-  playTone(1760, 'sine', 0.3, 0.05, audioCtx.currentTime + 0.05);
   showCutin('まめ消し 魔法！');
 }
 
+/**
+ * 描画ループ
+ */
 function render() {
   ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
-  // 容器
+  // 1. 容器の描画
   ctx.strokeStyle = '#5E3A21';
   ctx.lineWidth = 10;
   ctx.beginPath();
@@ -477,7 +458,7 @@ function render() {
   );
   ctx.stroke();
 
-  // 境界線
+  // 2. ゲームオーバー境界線
   ctx.setLineDash([5, 8]);
   ctx.strokeStyle = '#FCA5A5';
   ctx.lineWidth = 2;
@@ -487,27 +468,28 @@ function render() {
   ctx.stroke();
   ctx.setLineDash([]);
 
-  // プレビュー
+  // 3. 落下位置のプレビュー（半透明）
   if (gameState === 'PLAYING' && !isDropping) {
     ctx.globalAlpha = 0.5;
     drawPudding(
       ctx,
       currentX,
-      DROP_Y, // 【修正】100 を DROP_Y に変更
+      DROP_Y,
       EVOLUTION[currentType].radius,
       EVOLUTION[currentType].color,
       EVOLUTION[currentType].borderColor,
       0,
     );
     ctx.globalAlpha = 1.0;
+    // ガイドライン
     ctx.strokeStyle = 'rgba(94, 58, 33, 0.05)';
     ctx.beginPath();
-    ctx.moveTo(currentX, DROP_Y); // 【修正】100 を DROP_Y に変更
+    ctx.moveTo(currentX, DROP_Y);
     ctx.lineTo(currentX, 650);
     ctx.stroke();
   }
 
-  // 物理オブジェクト
+  // 4. 盤面のプリンたちを描画
   const puddings = Composite.allBodies(world).filter(
     (b) => b.label === 'pudding',
   );
@@ -516,6 +498,7 @@ function render() {
     ctx.save();
     ctx.translate(p.position.x, p.position.y);
     ctx.rotate(p.angle);
+    // 弾力を表現するスケーリング
     if (p.custom.squish > 1) p.custom.squish -= 0.03;
     ctx.scale(p.custom.squish, 1 / p.custom.squish);
     drawPudding(
@@ -529,28 +512,14 @@ function render() {
     );
     ctx.restore();
 
-    // 変更: 虹専用キラキラ生成を豪華に（確率アップ、生成数増加、動きの拡大）
-    if (p.custom.level === 6 && Math.random() < 0.4) {
-      for (let j = 0; j < 2; j++) {
-        const ang = Math.random() * Math.PI * 2;
-        const r = Math.random() * config.radius;
-        sparkles.push({
-          x: p.position.x + Math.cos(ang) * r,
-          y: p.position.y + Math.sin(ang) * r,
-          vx: (Math.random() - 0.5) * 2,
-          vy: (Math.random() - 0.5) * 2 - 1,
-          size: Math.random() * 4 + 2,
-          life: 1.0,
-        });
-      }
-    }
-
+    // ゲームオーバー判定
     p.custom.life++;
     if (p.position.y < DEADLINE_Y && p.custom.life > 120) {
       const speed = Vector.magnitude(p.velocity);
       if (speed < 0.4) {
         p.custom.dangerTime++;
         if (p.custom.dangerTime > 120) gameOver();
+        // 警告演出（赤く光る）
         ctx.fillStyle = `rgba(239, 68, 68, ${0.1 + Math.sin(Date.now() * 0.01) * 0.1})`;
         ctx.beginPath();
         ctx.arc(p.position.x, p.position.y, config.radius + 8, 0, 7);
@@ -563,20 +532,18 @@ function render() {
     }
   });
 
-  // キラキラエフェクト
+  // 5. エフェクト（パーティクル等）
   sparkles.forEach((s, i) => {
     s.x += s.vx;
     s.y += s.vy;
     s.life -= 0.03;
     ctx.fillStyle = `rgba(255, 255, 255, ${s.life})`;
     ctx.beginPath();
-    const sz = s.size * (0.5 + Math.sin(Date.now() * 0.01) * 0.5);
-    ctx.arc(s.x, s.y, sz, 0, 7);
+    ctx.arc(s.x, s.y, s.size * (0.5 + Math.sin(Date.now() * 0.01) * 0.5), 0, 7);
     ctx.fill();
     if (s.life <= 0) sparkles.splice(i, 1);
   });
 
-  // パーティクル
   particles.forEach((p, i) => {
     p.x += p.vx;
     p.y += p.vy;
@@ -589,13 +556,18 @@ function render() {
     ctx.fill();
     if (p.life <= 0) particles.splice(i, 1);
   });
+
   ctx.globalAlpha = 1.0;
   requestAnimationFrame(render);
 }
 
+/**
+ * ポムポムプリンを描画する共通関数（光沢強化版）
+ */
 function drawPudding(ctx, x, y, radius, color, borderColor, level) {
   ctx.save();
 
+  // 1. 本体と色の描画
   if (color === 'rainbow') {
     const grad = ctx.createLinearGradient(
       x - radius,
@@ -604,23 +576,17 @@ function drawPudding(ctx, x, y, radius, color, borderColor, level) {
       y + radius,
     );
     grad.addColorStop(0, '#FFADAD');
-    grad.addColorStop(0.2, '#FFD6A5');
-    grad.addColorStop(0.4, '#FDFFB6');
-    grad.addColorStop(0.6, '#CAFFBF');
-    grad.addColorStop(0.8, '#9BFBC0');
+    grad.addColorStop(0.5, '#FDFFB6');
     grad.addColorStop(1, '#A0C4FF');
     ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(x, y, radius, 0, Math.PI * 2);
-    ctx.fill();
   } else {
     ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.arc(x, y, radius, 0, Math.PI * 2);
-    ctx.fill();
   }
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.fill();
 
-  // 全プリン共通の「つや」光沢
+  // 2. 「つや」光沢（グラデーション）：ぷるぷる感のベース
   const gloss = ctx.createRadialGradient(
     x - radius / 2.5,
     y - radius / 2.5,
@@ -629,19 +595,34 @@ function drawPudding(ctx, x, y, radius, color, borderColor, level) {
     y - radius / 2.5,
     radius,
   );
-  gloss.addColorStop(0, 'rgba(255,255,255,0.6)');
-  gloss.addColorStop(0.2, 'rgba(255,255,255,0.3)');
+  gloss.addColorStop(0, 'rgba(255,255,255,0.7)'); // 光沢を少し強めた
+  gloss.addColorStop(0.3, 'rgba(255,255,255,0.2)');
   gloss.addColorStop(0.8, 'rgba(255,255,255,0)');
   ctx.fillStyle = gloss;
   ctx.beginPath();
   ctx.arc(x, y, radius, 0, Math.PI * 2);
   ctx.fill();
 
+  // 【新規追加】ハイライト（白い光の点）：さらに光沢感を出すための修正
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+  ctx.beginPath();
+  ctx.ellipse(
+    x - radius * 0.4,
+    y - radius * 0.4,
+    radius * 0.2,
+    radius * 0.1,
+    Math.PI / 4,
+    0,
+    Math.PI * 2,
+  );
+  ctx.fill();
+
+  // 3. 枠線
   ctx.strokeStyle = borderColor;
   ctx.lineWidth = Math.max(2.5, radius * 0.1);
   ctx.stroke();
 
-  // カラメル
+  // 4. カラメル部分
   ctx.fillStyle = '#5E3A21';
   ctx.beginPath();
   ctx.ellipse(
@@ -655,62 +636,27 @@ function drawPudding(ctx, x, y, radius, color, borderColor, level) {
   );
   ctx.fill();
 
-  // 顔
+  // 5. 顔の描画
   const s = radius / 40;
   ctx.fillStyle = '#5E3A21';
   ctx.beginPath();
   ctx.arc(x - 8 * s, y, 2.5 * s, 0, 7);
-  ctx.fill();
+  ctx.fill(); // 左目
   ctx.beginPath();
   ctx.arc(x + 8 * s, y, 2.5 * s, 0, 7);
-  ctx.fill();
+  ctx.fill(); // 右目
   ctx.strokeStyle = '#5E3A21';
   ctx.lineWidth = 1.5 * s;
   ctx.beginPath();
   ctx.arc(x, y + 4 * s, 2 * s, 0, Math.PI);
-  ctx.stroke();
+  ctx.stroke(); // 口
 
   ctx.restore();
 }
 
-function createParticles(x, y, color) {
-  const c = color === 'rainbow' ? '#FFD6A5' : color;
-  for (let i = 0; i < 10; i++) {
-    particles.push({
-      x,
-      y,
-      color: c,
-      vx: (Math.random() - 0.5) * 8,
-      vy: (Math.random() - 0.8) * 8,
-      size: Math.random() * 4 + 2,
-      life: 1.0,
-    });
-  }
-}
-
-function createSpecialParticles(x, y, count) {
-  const colors = [
-    '#FFADAD',
-    '#FFD6A5',
-    '#FDFFB6',
-    '#CAFFBF',
-    '#9BFBC0',
-    '#A0C4FF',
-  ];
-  for (let i = 0; i < count; i++) {
-    const c = colors[Math.floor(Math.random() * colors.length)];
-    particles.push({
-      x,
-      y,
-      color: c,
-      vx: (Math.random() - 0.5) * 15,
-      vy: (Math.random() - 0.8) * 15,
-      size: Math.random() * 6 + 3,
-      life: 1.0,
-    });
-  }
-}
-
+/**
+ * ゲームオーバー処理
+ */
 function gameOver() {
   if (gameState === 'GAMEOVER') return;
   gameState = 'GAMEOVER';
@@ -718,8 +664,6 @@ function gameOver() {
   document.getElementById('finalScore').innerText = score;
   const screen = document.getElementById('gameover-screen');
   screen.classList.remove('hidden');
-
-  // 変更: ゲームオーバー時に魔法ゲージを非表示にする
   document.getElementById('magic-container').classList.add('hidden');
 
   setTimeout(() => {
@@ -729,4 +673,5 @@ function gameOver() {
   playTone(150, 'sawtooth', 0.6, 0.1);
 }
 
+// ゲームの初期化を実行
 init();
