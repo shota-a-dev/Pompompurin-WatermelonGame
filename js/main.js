@@ -1,10 +1,5 @@
 /**
  * 5ポムポム！ぷりんシンカ - メインスクリプト
- * * 修正内容:
- * 1. ゲームオーバー判定を容器上端（一部はみ出しでアウト）に変更
- * 2. 物理演算の摩擦を大幅に軽減し、転がりやすさを向上
- * 3. 描画エンジンの光沢（ハイライト）強度をアップ
- * 4. 全処理への詳細コメント追加
  */
 
 const GAME_WIDTH = 380;
@@ -17,7 +12,6 @@ const CONTAINER_BOTTOM_MARGIN = 90;
 const CONTAINER_CENTER_Y =
   GAME_HEIGHT - CONTAINER_H / 2 - CONTAINER_BOTTOM_MARGIN;
 
-// 【修正】デッドラインを容器の物理的な「上端」に設定
 const DEADLINE_Y = CONTAINER_CENTER_Y - CONTAINER_H / 2;
 
 const DROP_Y = 130;
