@@ -818,7 +818,7 @@ function gameOver() {
   // 自己ベスト更新かどうかに応じて画像を切り替える
   const gameoverImg = document.querySelector('#gameover-screen img');
   if (isNewBest) {
-    gameoverImg.src = 'assets/image/purin_gameover_best.png';
+    gameoverImg.src = 'assets/image/purin_update_best.png';
   } else {
     gameoverImg.src = 'assets/image/purin_gameover.png';
   }
