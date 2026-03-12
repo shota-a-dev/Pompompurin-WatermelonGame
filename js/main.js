@@ -1,5 +1,5 @@
 /**
- * 5ポムポム！ぷりんシンカ - メインスクリプト
+ * ポムポム！ぷりんシンカ - メインスクリプト
  */
 
 const GAME_WIDTH = 380;
@@ -89,6 +89,7 @@ let isDropping = false;
 let currentX = GAME_WIDTH / 2;
 let particles = [];
 let sparkles = [];
+let scorePopups = [];
 let isNewBest = false;
 let isBgmStarted = false;
 
@@ -351,6 +352,7 @@ function startGame() {
     if (b.label === 'pudding') Composite.remove(world, b);
   });
   sparkles = [];
+  scorePopups = []; // 追加: ポップアップのリセット
   document.getElementById('title-screen').classList.add('hidden');
   document.getElementById('gameover-screen').classList.add('hidden');
   document.getElementById('gameover-screen').style.opacity = 0;
@@ -451,7 +453,19 @@ function handleCollision(event) {
             },
           );
           Composite.add(world, evolved);
-          updateScore(EVOLUTION[newLevel].score);
+          
+          const addScore = EVOLUTION[newLevel].score;
+          updateScore(addScore);
+          
+          // 追加: ポップアップの生成
+          scorePopups.push({
+            x: newX,
+            y: newY,
+            text: `+${addScore}`,
+            life: 1.0,
+            vy: -1.5 // 上方向へ移動させる速度
+          });
+
           addMagicPoints(5 + newLevel * 2);
 
           if (newLevel === 6) {
@@ -466,6 +480,16 @@ function handleCollision(event) {
         } else if (level === 6) {
           Composite.remove(world, [a, b]);
           updateScore(500);
+          
+          // 追加: ポップアップの生成 (レベル6消滅時)
+          scorePopups.push({
+            x: newX,
+            y: newY,
+            text: `+500`,
+            life: 1.0,
+            vy: -1.5
+          });
+
           addMagicPoints(50);
           createSpecialParticles(newX, newY, 120);
           playTone(1046, 'square', 0.2, 0.1);
@@ -683,6 +707,32 @@ function render() {
     ctx.fill();
     if (p.life <= 0) particles.splice(i, 1);
   });
+
+  // 追加: スコアポップアップの描画
+  scorePopups.forEach((pop, i) => {
+    pop.y += pop.vy; // 上へ移動
+    pop.life -= 0.02; // フェードアウト速度
+
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, pop.life);
+    ctx.font = "900 24px 'M PLUS Rounded 1c', sans-serif";
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // 文字のフチ取り（UIの茶色）
+    ctx.strokeStyle = '#5E3A21';
+    ctx.lineWidth = 4;
+    ctx.lineJoin = 'round';
+    ctx.strokeText(pop.text, pop.x, pop.y);
+
+    // 文字の塗り（UIの黄色）
+    ctx.fillStyle = '#FACC15';
+    ctx.fillText(pop.text, pop.x, pop.y);
+    ctx.restore();
+
+    if (pop.life <= 0) scorePopups.splice(i, 1);
+  });
+
   ctx.globalAlpha = 1.0;
   requestAnimationFrame(render);
 }
